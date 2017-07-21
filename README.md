@@ -10,10 +10,10 @@ Docker 容器web控制台
 
 ## 2. 使用说明
 
-###2.1 服务部署说明
+### 2.1 服务部署说明
     代码就是Docker web控制台的web服务器。需要把jss以及html文件存放在一个文件夹里面。服务端口默认是8080， 或者可以通过参数`-port=`
 
-###2.2 服务和docker通信配置
+### 2.2 服务和docker通信配置
     服务器目前还不支持unix socket, 需要docker导出端口进行访问。
 
 ```
@@ -21,7 +21,7 @@ vim /etc/systemd/system/multi-user.target.wants/docker.service
 -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock 
 ```
 
-###2.3 启动服务
+### 2.3 启动服务
 
    启动服务：
 ```
