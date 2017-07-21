@@ -14,7 +14,7 @@ Docker 容器web控制台
     代码就是Docker web控制台的web服务器。需要把jss以及html文件存放在一个文件夹里面。服务端口默认是8080， 或者可以通过参数`-port=`
 
 ### 2.2 服务和docker通信配置
-    服务器目前还不支持unix socket, 需要docker导出端口进行访问。
+    服务器目前`-host=tcp:ip:port`模式， 需要配置docker打开端口
 
 ```
 vim /etc/systemd/system/multi-user.target.wants/docker.service 
@@ -23,11 +23,16 @@ vim /etc/systemd/system/multi-user.target.wants/docker.service
 
 ### 2.3 启动服务
 
-   启动服务：
+   启动服务[通过ip端口和docker通信]:
 ```
-./docker-container-web-console -port=8080 -host=127.0.0.1:2375
+./docker-container-web-console -port=8080 -host=tcp:127.0.0.1:2375
 ```
 
+  启动服务[通过本地socker端口和docker通信]:
+
+```
+./docker-container-web-console -port=8080 -host=unix:/var/run/docker.sock
+```
 
    通过浏览器进入docker容器<container-id>必须全称
 
