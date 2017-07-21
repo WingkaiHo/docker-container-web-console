@@ -1,0 +1,78 @@
+<html>
+
+<head>
+
+    <link href="./bootstrap.min.css" rel="stylesheet">
+    <script src="./jquery.min.js"></script>
+    <link rel="stylesheet" href="./jquery-ui.css" />
+    <script src="./jquery-ui.min.js"></script>
+    <script src="./term.js"></script>
+    <script src="./bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #000;
+        }
+
+        .terminal {
+            border: #000 solid 10px;
+            font-family: "DejaVu Sans Mono", "Liberation Mono", monospace;
+            font-size: 11px;
+            color: #f0f0f0;
+            background: #000;
+        }
+
+        .terminal-cursor {
+            color: #000;
+            background: #f0f0f0;
+        }
+    </style>
+
+    <script type="text/javascript">
+	var term;
+　　
+	var param = window.location.search.split("=")[1];
+	if(param.endsWith == "&"){
+		param = param.substring(0,param.lenth-1);
+	}
+	var websocket = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port + "/exec/" + param);
+  	websocket.onopen = function(evt) {//打开连接websocket
+		term = new Terminal({  //new 一个terminal实例，就是数据展示的屏幕和一些见简单设置，包括屏幕的宽度，高度，光标是否闪烁等等
+			cols: 200,
+			rows: 80,
+			screenKeys: true,
+			useStyle: true,
+			cursorBlink: true,
+       	});
+		
+		/*term实时监控输入的数据，并且websocket把实时数据发送给后台*/
+		term.on('data', function(data) {//term.on方法就是实时监控输入的字段，
+			websocket.send(data);//websocket发送给后台
+    		});
+		term.on('title', function(title) {
+			document.title = title;
+    		});
+		term.open(document.getElementById('container-terminal'));//屏幕将要在哪里展示，就是屏幕展示的地方
+    		websocket.onmessage = function(evt) {//接受到数据
+			term.write(evt.data);//把接收的数据写到这个插件的屏幕上
+		}
+		
+		websocket.onclose = function(evt) {//websocket关闭
+			term.write("Session terminated");
+			term.destroy();//屏幕关闭
+		}
+		websocket.onerror = function(evt) {//失败额处理
+			if (typeof console.log == "function") {
+        　　　　	console.log(evt)
+			}
+    		}
+	}
+ 	
+	var close = function() {//关闭websocket
+		websocker.send("exit\n")
+    		websocket.close();
+  	};
+    </script>
+</head>
+<div id="container-terminal"></div>
+
+</html>
