@@ -2,11 +2,8 @@ package main
 
 import (
 	"bytes"
-	//	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
-	//	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
