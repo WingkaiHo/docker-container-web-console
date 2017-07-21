@@ -2,23 +2,25 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	//	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
+	//	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/fsouza/go-dockerclient"
 	"github.com/golang/glog"
 	"golang.org/x/net/websocket"
 )
 
 var port = flag.String("port", "8080", "Port for server")
-var host = flag.String("host", "127.0.0.1:2375", "Docker host")
+var host = flag.String("host", "tcp://127.0.0.1:2375", "Docker host")
 
 func main() {
 	flag.Parse()
@@ -30,30 +32,34 @@ func main() {
 }
 
 func ExecContainer(ws *websocket.Conn) {
+	glog.Infof("Request: %s %s", ws.RemoteAddr().String(), ws.Request().URL.String())
 	container := ws.Request().URL.Path[len("/exec/"):]
-	fmt.Println(container)
 	if container == "" {
 		ws.Write([]byte("Container does not exist"))
 		return
 	}
-	type stuff struct {
-		Id string
+
+	dockerClient, err := docker.NewClient(*host)
+	if err != nil {
+		glog.Errorf("Create the docker client fail %s", err.Error())
+		return
 	}
-	var s stuff
-	params := bytes.NewBufferString("{\"AttachStdin\":true,\"AttachStdout\":true,\"AttachStderr\":true,\"Tty\":true,\"Cmd\":[\"/bin/bash\"]}")
-	resp, err := http.Post("http://"+*host+"/containers/"+container+"/exec", "application/json", params)
+
+	execRes, err := dockerClient.CreateExec(docker.CreateExecOptions{
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          true,
+		Cmd:          []string{"/bin/bash"},
+		Container:    container,
+	})
+
 	if err != nil {
 		glog.Errorln(err)
-		panic(err)
+		return
 	}
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		glog.Errorln(err)
-		panic(err)
-	}
-	json.Unmarshal([]byte(data), &s)
-	glog.Infoln("request id: " + s.Id)
-	if err := hijack(*host, "POST", "/exec/"+s.Id+"/start", true, ws, ws, ws, nil, nil); err != nil {
+
+	if err := hijack(*host, "POST", "/exec/"+execRes.ID+"/start", true, ws, ws, ws, nil, nil); err != nil {
 		panic(err)
 	}
 
@@ -62,19 +68,29 @@ func ExecContainer(ws *websocket.Conn) {
 }
 
 func hijack(addr, method, path string, setRawTerminal bool, in io.ReadCloser, stdout, stderr io.Writer, started chan io.Closer, data interface{}) error {
+	var network string
 	params := bytes.NewBufferString("{\"Detach\": false, \"Tty\": true}")
 	req, err := http.NewRequest(method, path, params)
-	fmt.Println(req)
 	if err != nil {
+		glog.Infoln(err.Error())
 		return err
 	}
+
+	if strings.HasPrefix(addr, "tcp:") {
+		network = "tcp"
+		addr = addr[4:]
+	} else if strings.HasPrefix(addr, "unix:") {
+		network = "unix"
+		addr = addr[5:]
+	}
+
 	req.Header.Set("User-Agent", "Docker-Client")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connection", "Upgrade")
 	req.Header.Set("Upgrade", "tcp")
 	req.Host = addr
 
-	dial, err := net.Dial("tcp", addr)
+	dial, err := net.Dial(network, addr)
 	// When we set up a TCP connection for hijack, there could be long periods
 	// of inactivity (a long running command with no output) that in certain
 	// network setups may cause ECONNTIMEOUT, leaving the client in an unknown
@@ -86,7 +102,7 @@ func hijack(addr, method, path string, setRawTerminal bool, in io.ReadCloser, st
 		tcpConn.SetKeepAlivePeriod(30 * time.Second)
 	}
 	if err != nil {
-		glog.Error()
+		glog.Errorln(err.Error())
 		return err
 	}
 	clientconn := httputil.NewClientConn(dial, nil)
@@ -113,7 +129,7 @@ func hijack(addr, method, path string, setRawTerminal bool, in io.ReadCloser, st
 			return err
 		}()
 	}
-	fmt.Println("a")
+
 	go func() error {
 		if in != nil {
 			// read data from browser and send to docker container bash
