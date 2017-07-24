@@ -39,3 +39,13 @@ vim /etc/systemd/system/multi-user.target.wants/docker.service
 ```
 http://127.0.0.1:8080?id=<container-id>
 ```
+
+
+### 2.4 Docker 启动
+
+  通过脚本build-docker-image.sh, 生成docker镜像
+
+  启动
+```
+  docker run -d  --name docker-container-web -p 2376:2376 -v /var/run/docker.sock:/var/run/docker.sock docker-web-console:v1.0
+``` 

@@ -1,5 +1,5 @@
 FROM scratch
 
-ADD web.tar /
-EXPOSE 8080
-CMD ["/web/docker-exec-web-console", "-logtostderr"]
+COPY web/* /
+EXPOSE 2376
+CMD ["/docker-exec-web-console", "-logtostderr", "-port=2376"]

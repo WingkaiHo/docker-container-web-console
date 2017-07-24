@@ -17,7 +17,7 @@ import (
 )
 
 var port = flag.String("port", "8080", "Port for server")
-var host = flag.String("host", "tcp://127.0.0.1:2375", "Docker host")
+var host = flag.String("host", "unix:///var/run/docker.sock", "Docker host for example unix://var/run/docker.sock or tcp://127.0.0.1:2375")
 
 func main() {
 	flag.Parse()
